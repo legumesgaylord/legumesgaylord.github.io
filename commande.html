@@ -186,20 +186,30 @@
     </div>
   </div>
 </div>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-    <div class="container-fluid">
-      <h2 class="h5 mb-1"> <a class="navbar-brand fw-bold" href="#">Trip-Hop – Quai des Remparts, Lisieux</a></h2>
-      <p class="mb-0 small text-muted">Vendredi de 16h30 à 20h</p>
-      <div class="ms-auto d-flex align-items-center">
-         <span class="me-2">Liste</span>
-        <div class="form-check form-switch me-3">
-          <input class="form-check-input" type="checkbox" role="switch" id="viewSwitch" checked>
-          <label class="form-check-label" for="viewSwitch">Détails</label>
-        </div>
+ <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <div class="container-fluid flex-wrap flex-lg-nowrap">
+    <!-- Bloc gauche : nom + date/adresse -->
+    <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center">
+      <h2 class="h5 mb-1 me-lg-3">
+        <a id="navbarTitre" class="navbar-brand fw-bold" href="#">Chargement...</a>
+      </h2>
+      <p class="mb-0 small text-muted text-start">
+        <span id="navbarDate">{Dates},</span><br class="d-lg-none" />
+        <span id="navbarAdresse">{Adresse}</span>
+      </p>
+    </div>
+
+    <!-- Bloc droit : bouton switch -->
+    <div class="ms-auto d-flex align-items-center mt-2 mt-lg-0">
+      <span class="me-2">Liste</span>
+      <div class="form-check form-switch me-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="viewSwitch" checked>
+        <label class="form-check-label" for="viewSwitch">Détails</label>
       </div>
     </div>
-  </nav>
+  </div>
+</nav>
+
   
 
   <main class="container my-4" id="productContainer">
@@ -533,6 +543,7 @@
     </div>
   </div>
   
+<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
 
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -606,24 +617,57 @@ async function loadProducteurs() {
     const retrait = urlParams.get('retrait');
 
     const res = await fetch(`${scriptURL}?action=commande&retrait=${retrait}`);
-    const producteurs = await res.json();
+    const json = await res.json();
     
       // attendre 1 frame pour forcer le rendu du spinner
    // await new Promise(r => requestAnimationFrame(r));
+   
 
-    console.log(producteurs);
+    console.log(json);
+    document.getElementById("navbarTitre").textContent = json['pdv'].titre;
+    document.getElementById("navbarAdresse").textContent = json['pdv'].adresse;
+    
+    const dateRetrait = new Date(json['pdv'].date);
+    const dateFin = new Date(json['pdv'].date_fin);
+    
+    document.getElementById("navbarDate").textContent =` ${capitalizeFirst(formatJour(dateRetrait))} de ${dateRetrait.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} à ${dateFin.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+    
+    producteurs = json['catalogue'];
     const container = document.getElementById('productContainer');
 
     for (const p of producteurs) {
       const section = document.createElement('section');
       section.className = 'mb-4';
+      section.setAttribute("data-mincmd", "123");
+      
+      
+      let headerStyle = "info";
+      if (p['config']['master']=="oui") {
+        headerStyle="primary";
+         section.setAttribute("data-master", "true"); //Est le master
+        section.setAttribute("data-mincmd", p['config'].minCommande); //Minimum de commande exigé
+        section.setAttribute("data-minpartenaire", p['config'].minCommandePartenaires); //Minimum de commande pour debloquer les partenaires
+      
+      }
       section.innerHTML = `
-        <div class="alert alert-primary alert-small" role="alert">
-          <h4 id="prod1" class="h6 text-uppercase text-muted mb-3">>Producteur : ${p['nomProducteur']}</h4>
-        </div>
-        <div class="row g-4 view-cards"></div>
-        <div class="view-list d-none"></div>
-      `;
+        <div class="alert alert-${headerStyle} alert-small" role="alert">
+          <h4 id="${p['config'].prefix}" class="h6 text-uppercase text-muted mb-3">${p['config'].nom}</h4>${p['config'].texte_court}
+        </div>`;
+        
+           //AJOUTER LE MESSAGE SI ALCOOL
+      const hasAlcohol = p['products'].some(p => p.alcool.toLowerCase() === "oui");
+      if (hasAlcohol) {
+          section.innerHTML += `<div class="alert alert-danger" role="alert" style="font-size:14px;padding:5px">
+ L'abus d'alcool est dangereux pour la santé, à consommer avec modération! Vente interdite aux moins de 18 ans
+</div>`;
+      }
+      
+        
+        section.innerHTML += `<div class="row g-4 view-cards"></div>
+        <div class="view-list d-none"></div>`;
+      
+      
+   
       container.appendChild(section);
 
       const products = p.products;
@@ -646,10 +690,10 @@ async function loadProducteurs() {
               <p class="mb-1 small text-muted">
                 Catégorie: ${prod.categorie} • Calibre: ${prod.calibre} • Origine: ${prod.origine} ${prod.label ? '• ' + prod.label : ''}
               </p>
-              <p class="price">${prod.prix_unitaire} € / ${prod.unite}</p>
-              <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}" data-price="${prod.prix_unitaire}">
+              <p class="price product-row"  data-prix-unitaire="${prod.prix_unitaire}">${prod.prix_unitaire} € / ${prod.unite}</p>
+              <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}"  data-price="${prod.prix_unitaire}">
                 <button type="button" class="quantity-btn btn-minus">−</button>
-                <input type="number" class="quantity-input" value="0" min="0" max="10">
+                <input type="number" class="quantity-input" value="0" min="0" max="10"  data-price="${prod.prix_unitaire}">
                 <button type="button" class="quantity-btn btn-plus">+</button>
               </div>
             </div>
@@ -672,8 +716,19 @@ async function loadProducteurs() {
         
         
         
-        
       });
+      
+    //APRES LA LISTE IL FAUT AFFICHER LES CONDITIONS DE COMMANDE, UPDATABLES
+    //SI MASTER, ON REGARDE LE MIN COMMANDE (En rouge) MIN POUR DEBLOQUER PARTENAIRES, LE MIN partenaires (en jaune)
+    //SI PartenaireON regarde le min commande (en rouge, sauf si 0)
+     /*   <section class="mb-4" aria-labelledby="prodX">
+<div class="alert alert-warning" role="warning">
+ Pour pouvoir commander des produits de nos partenaires locaux, il faut commander au minimum 10€ aux Légumes de Gaylord
+ <br/> Sur ce site de commande groupée, chaque partenaire est responsable de ses ventes réalisées directement avec ses clients. 
+</div>
+    </section>*/
+      
+      
     }
   } catch (error) {
     console.error("Erreur lors du chargement des producteurs :", error);
@@ -693,6 +748,46 @@ loadProducteurs();
   
 <script>
  
+function updatePartnerInputs() {
+  const masterSection = document.querySelector('section[data-master="true"]');
+  if (!masterSection) return;
+
+  const minPartenaire = parseFloat(masterSection.dataset.minpartenaire);
+
+  // Calcul du total € du master !! ON PREND AUSSI LE MODE LISTE...
+  let totalMaster = 0;
+  masterSection.querySelectorAll('.card-body .quantity-input').forEach(input => {
+    const prix = parseFloat(input.dataset.price || 0);
+    totalMaster += (parseInt(input.value, 10) || 0) * prix;
+  });
+  console.log("TotalMaster:"+totalMaster);
+
+
+  // Désactiver/activer les inputs + boutons des non-master
+  const allSections = document.querySelectorAll('section.mb-4');
+  const nonMasterSections = Array.from(allSections).filter(sec => sec.dataset.master !== "true");
+let resetProducts = new Set();
+  nonMasterSections.forEach(sec => {
+    sec.querySelectorAll('.quantity-input, .quantity-btn').forEach(el => {
+
+     const disable = totalMaster < minPartenaire;
+     el.disabled = disable;
+
+     // Si on désactive, on remet l'input à 0
+    if (disable && el.classList.contains('quantity-input')  && parseInt(el.value, 10) > 0) {
+      //Il faut dire attention on va mettre a 0!!
+       const prodName = el.closest('.quantity-selector').dataset.product;
+         resetProducts.add(prodName);  // Set empêche les doublons
+       
+      el.value = 0;
+      updateQuantity(el, 0);
+    }
+  });
+});
+  if (resetProducts.size > 0) {
+  showToast(`Les produits suivants ont été supprimés du panier car le minimum master n'est pas atteint : ${Array.from(resetProducts).join(', ')}`);
+}
+}
 
   function updateCart(product, price, quantity) {
     if (quantity <= 0) {
@@ -706,11 +801,15 @@ loadProducteurs();
     }
     console.log("🛒 Panier mis à jour :", panier);
     // 👉 Ici, tu peux mettre à jour une icône ou un compteur si tu veux
+    
      updateCartUI();
   }
 
 // Fonction pour mettre à jour la quantité et synchroniser tout
 function updateQuantity(input, value) {
+  
+  
+  
   const selector = input.closest('.quantity-selector');
   const id = selector.dataset.id;
   const price = parseFloat(selector.dataset.price);
@@ -740,6 +839,8 @@ function updateQuantity(input, value) {
     }
   });
 
+  
+  
   // Mettre à jour le panier
   updateCart(selector.dataset.product, price, value);
 }
@@ -755,7 +856,9 @@ document.addEventListener('click', (e) => {
   if (e.target.classList.contains('btn-minus')) value--;
   if (e.target.classList.contains('btn-plus')) value++;
 
+  
   updateQuantity(input, value);
+  updatePartnerInputs();
 });
 
 // Gestion de la saisie directe dans l'input
@@ -764,11 +867,60 @@ document.addEventListener('input', (e) => {
 
   const input = e.target;
   let value = parseInt(input.value) || 0;
-
+   
   updateQuantity(input, value);
+  updatePartnerInputs();
 });
+
+// --- Fonctions utilitaires ---
+function formatJour(date) {
+  const options = { weekday: 'long', day: '2-digit', month: '2-digit' };
+  return date.toLocaleDateString('fr-FR', options);
+}
+
+function capitalizeFirst(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function showToast(message, title = 'Attention') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  // Crée le toast
+  const toastEl = document.createElement('div');
+  toastEl.className = 'toast align-items-center text-bg-warning border-0';
+  toastEl.setAttribute('role', 'alert');
+  toastEl.setAttribute('aria-live', 'assertive');
+  toastEl.setAttribute('aria-atomic', 'true');
+
+  toastEl.innerHTML = `
+    <div class="toast-header"><strong class="me-auto"> ${title}</strong>
+    <small>Produits partenaires supprimés</small>
+    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+      <div class="toast-body">
+        ${message}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  `;
+
+  container.appendChild(toastEl);
+
+  // Initialise le toast
+  const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+  toast.show();
+
+  // Supprime le toast du DOM après disparition
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+}
+
+
+
+
 
 </script>
 
 </body>
 </html>
+
