@@ -772,6 +772,26 @@ let resetProducts = new Set();
 
      const disable = totalMaster < minPartenaire;
      el.disabled = disable;
+     
+      // On détruit toujours l'ancien tooltip pour éviter les doublons
+    if (el._tooltip) {
+      el._tooltip.dispose();
+      el._tooltip = null;
+    }
+     
+     
+        if (disable) {
+      // Ajouter le titre
+      el.setAttribute('title', `Le minimum master n'est pas atteint (${minPartenaire}€ requis)`);
+      // Créer un nouveau tooltip
+      el._tooltip = new bootstrap.Tooltip(el, {
+        placement: 'top',
+        trigger: 'hover focus'
+      });
+    } else {
+      // Supprimer le title si actif
+      el.removeAttribute('title');
+    }
 
      // Si on désactive, on remet l'input à 0
     if (disable && el.classList.contains('quantity-input')  && parseInt(el.value, 10) > 0) {
@@ -923,4 +943,3 @@ function showToast(message, title = 'Attention') {
 
 </body>
 </html>
-
