@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Commande - Vente directe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+.btn-commande {
+  background-color: #28a745;
+  border: none;
+  color: white;
+  transition: all 0.2s ease;
+  
+}
+.btn-commande:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.product-card.highlight {
+  border: 2px solid #28a745; /* vert Bootstrap pour “bio” */
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+  transform: scale(1.02); /* petit zoom */
+  transition: all 0.3s ease;
+  background-color: #e6f9ec; /* vert très pâle */
+}
+
+.product-list-item.highlight {
+  border: 2px solid #28a745; /* vert Bootstrap pour “bio” */
+  /*box-shadow: 0 0 15px rgba(40, 167, 69, 0.5); */
+  transform: scale(1.01); /* petit zoom */
+  transition: all 0.3s ease;
+  background-color: #e6f9ec; /* vert très pâle */
+}
+
+.spinner-overlay {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background-color: #fff; /* fond blanc */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:1050;
+}
+
+.spinner-overlay.hidden { display:none !important; }
+
+.spinner-content { display:flex; flex-direction:column; align-items:center; }
+
+.spinner-container { display:flex; gap:1rem; }
+
+.spinner-dot {
+  width: 2rem; height: 2rem; /* plus gros */
+  background-color: #28a745;
+  border-radius: 50%;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.spinner-dot2 { animation-delay:0.2s; }
+.spinner-dot3 { animation-delay:0.4s; }
+
+@keyframes bounce {
+  0%,80%,100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+</style>
+  <style>
+    body { padding-top: 70px; padding-bottom: 100px; }
+    .navbar { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .footer-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #f8f9fa; border-top: 1px solid #ddd; padding: .5rem 1rem; }
+    .product-list-item { border-bottom: 1px solid #ddd; padding: .1rem 0; font-size:0.9em}
+    .price { font-weight: 600; color: #198754; }
+    .point-retrait { background: #f1f3f5; padding: 1rem; border-radius: .5rem; margin-bottom: 1.5rem; }
+
+    .product-img {
+      height: 200px;
+      object-fit: cover;
+      /*border-radius: 0.5rem 0.5rem 0 0;*/
+    }
+    
+    .alert-small {
+  font-size: 12px; /* ou 8px selon ton besoin */
+  padding:5px;
+}
+    
+    
+
+@media (max-width: 576px) {
+  .product-card {
+    display: flex;
+    flex-direction: column; /* vertical */
+    height: 100%;
+  }
+
+  .img-container {
+    width: 100%;
+    /*height: 150px;*/
+    overflow: hidden;
+   /* border-radius: 0.5rem;*/
+    margin-bottom: 0.5rem;
+  }
+
+  .img-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-body {
+    padding: 0.5rem;
+  }
+}
+
+
+    
+  </style>
+  <style>
+    .quantity-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      user-select: none;
+    }
+
+    .quantity-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #ced4da;
+      background-color: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      transition: all 0.15s ease;
+    }
+
+    .quantity-btn:active {
+      transform: scale(0.9);
+      background-color: #e9ecef;
+    }
+
+    .quantity-input {
+      width: 60px;
+      text-align: center;
+      font-size: 1.2rem;
+      border: none;
+      border-bottom: 2px solid #ced4da;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .quantity-input:focus {
+      border-color: #0d6efd;
+    }
+
+    @media (max-width: 400px) {
+      .quantity-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+      }
+      .quantity-input {
+        width: 50px;
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="spinner-overlay" class="spinner-overlay hidden">
+  <div class="spinner-content text-center">
+    <div class="spinner-container">
+      <div class="spinner-dot spinner-dot1"></div>
+      <div class="spinner-dot spinner-dot2"></div>
+      <div class="spinner-dot spinner-dot3"></div>
+    </div>
+    <div class="spinner-text mt-3 fw-bold text-dark">
+      Chargement de la liste des produits
+    </div>
+  </div>
+</div>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+    <div class="container-fluid">
+      <h2 class="h5 mb-1"> <a class="navbar-brand fw-bold" href="#">Trip-Hop – Quai des Remparts, Lisieux</a></h2>
+      <p class="mb-0 small text-muted">Vendredi de 16h30 à 20h</p>
+      <div class="ms-auto d-flex align-items-center">
+         <span class="me-2">Liste</span>
+        <div class="form-check form-switch me-3">
+          <input class="form-check-input" type="checkbox" role="switch" id="viewSwitch" checked>
+          <label class="form-check-label" for="viewSwitch">Détails</label>
+        </div>
+      </div>
+    </div>
+  </nav>
+  
+
+  <main class="container my-4" id="productContainer">
+
+
+
+
+
+    <!-- Producteur 1 -->
+    <section class="mb-4" aria-labelledby="prod1">
+      
+      <div class="alert alert-primary alert-small" role="alert">
+        <h4 id="prod1" class="h6 text-uppercase text-muted mb-3">Les Légumes de gaylord</h4>
+  Production en agriculture biologique à Beuvillers (Lisieux / Calvados) - <a href="#">En savoir +</a>
+</div>
+
+      <!-- Mode cartes -->
+      <div class="row g-4 view-cards">
+        <!-- Produit 1 -->
+         <div class="col-6 col-md-4 col-lg-3">
+        <div class="card product-card h-100">
+            <div class="img-container">
+               <div class="position-relative d-inline-block">
+              <img src="https://picsum.photos/500/500?random=11" alt="Carottes bio" class="img-fluid">
+              <img src="logo-bio.jpg" 
+       class="position-absolute  bottom-0 end-0 m-2" 
+       style="width:30px; height:30px;" 
+       alt="Label AB">
+</div>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Carottes</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
+              <p class="price">2,80 €/kg</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option><option>3</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Carottes',2.8)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Produit 2 -->
+        <div class="col-6 col-md-4 col-lg-3">
+        <div class="card product-card h-100">
+            <div class="img-container">
+               <div class="position-relative d-inline-block">
+              <img src="https://picsum.photos/500/500?random=12" alt="Carottes bio" class="img-fluid">
+             <div class="position-absolute top-0 start-0 m-2 p-1 bg-danger text-white rounded">
+    Interdit -18 ans
+  </div>
+</div></div>
+            <div class="card-body">
+              <h5 class="card-title">Poireaux</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Gros • Origine : France • Label : AB</p>
+              <p class="price">3,80 €/kg</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option><option>3</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Poireaux',3.8)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Produit 3 -->
+         <div class="col-6 col-md-4 col-lg-3">
+        <div class="card product-card h-100">
+            <div class="img-container">
+              <img src="https://picsum.photos/300/300?random=13" alt="Oignons bio" class="card-img-top product-img">
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Oignons</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
+              <p class="price">3,00 €/kg</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option><option>3</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Oignons',3)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode liste -->
+      <div class="view-list d-none">
+        <div class="product-list-item d-flex justify-content-between align-items-center">
+          <div><strong>Carottes</strong><br><small>Cat. I • Calibre : Moyen • Origine : France • AB</small><br><span class="price">2,80 €/kg</span></div>
+          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Carottes',2.8)">Ajouter</button></div>
+        </div>
+        <div class="product-list-item d-flex justify-content-between align-items-center">
+          <div><strong>Poireaux</strong><br><small>Cat. I • Calibre : Gros • Origine : France • AB</small><br><span class="price">3,80 €/kg</span></div>
+          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Poireaux',3.8)">Ajouter</button></div>
+        </div>
+        <div class="product-list-item d-flex justify-content-between align-items-center">
+          <div><strong>Oignons</strong><br><small>Cat. I • Calibre : Moyen • Origine : France • AB</small><br><span class="price">3,00 €/kg</span></div>
+          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Oignons',3)">Ajouter</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-4" aria-labelledby="prodX">
+<div class="alert alert-warning" role="warning">
+ Pour pouvoir commander des produits de nos partenaires locaux, il faut commander au minimum 10€ aux Légumes de Gaylord
+ <br/> Sur ce site de commande groupée, chaque partenaire est responsable de ses ventes réalisées directement avec ses clients. 
+</div>
+    </section>
+    <!-- Producteur 2 -->
+
+      
+       <div class="alert alert-info alert-small" role="alert">
+        <h4 id="prod2" class="h6 text-uppercase text-muted mb-3">Partenaire : Jardin du Moulin à Lisieux (14) / Préparé par Les Légumes de Gaylord</h4>
+  Production de bières artisanales à Lisieux (14) <a href="#">En savoir +</a>
+</div>
+
+      <div class="alert alert-danger" role="alert" style="font-size:14px;padding:5px">
+ L'abus d'alcool est dangereux pour la santé, à consommer avec modération! Vente interdite aux moins de 18 ans
+</div>
+
+      <!-- Mode cartes -->
+      <div class="row g-3 view-cards">
+        <div class="col-md-4 d-flex">
+          <div class="card product-card h-100 d-flex flex-column">
+            <div class="img-container">
+              <img src="https://picsum.photos/300/300?random=21" alt="Pommes de terre bio">
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Pommes de terre</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Gros • Origine : France • Label : AB</p>
+              <p class="price">2,50 €/kg</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Pommes de terre',2.5)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 d-flex">
+          <div class="card product-card h-100 d-flex flex-column">
+            <div class="img-container">
+              <img src="https://picsum.photos/300/300?random=22" alt="Potimarron bio">
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Potimarron</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
+              <p class="price">2,50 €/pièce</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Potimarron',2.5)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4 d-flex">
+          <div class="card product-card h-100 d-flex flex-column">
+            <div class="img-container">
+              <img src="https://picsum.photos/300/300?random=23" alt="Topinambours bio">
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Topinambours</h5>
+              <p class="mb-1 text-muted small">Cat. I • Calibre : Petit • Origine : France • Label : AB</p>
+              <p class="price">4,00 €/kg</p>
+              <div class="d-flex align-items-center">
+                <select class="form-select form-select-sm me-2">
+                  <option>1</option><option>2</option>
+                </select>
+                <button class="btn btn-success btn-sm" onclick="addToCart('Topinambours',4)">Ajouter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bandeau bas -->
+  <div class="footer-bar d-flex justify-content-between align-items-center bg-white border-top shadow-sm p-3 rounded-3">
+      <h5 class="mb-0">Total : <span class="text-success fw-bold" id="cartSummary">0,00 €</span></h5>
+   <button class="btn btn-commande d-flex align-items-center gap-2 rounded-pill px-4 py-2" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas"> <i class="bi bi-cart-plus-fill"></i>Commander</button>
+  </div>
+
+  <!-- Offcanvas panier -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Ma commande</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+       <div class="alert alert-warning d-flex justify-content-center align-items-center" role="alert" style="font-size:14px;padding:5px">
+      Chaque partenaire est responsable de ses ventes réalisées directement avec ses clients.
+       </div>
+      <ul id="cartItems" class="list-group mb-3" style="font-size:0.8em">
+      <li class="list-group-item list-group-item-primary">
+  <!-- Ligne principale : texte + prix + badge sur la même ligne -->
+  <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+    <span>Les Légumes de Gaylord</span>
+    <span class="text-success fw-bold">8€</span>
+    <span class="badge bg-primary">2</span>
+  </div>
+  
+  <!-- Texte en dessous -->
+  <small class="text-muted d-block text-center">
+    Minimum de commande (10€) non atteint
+  </small>
+</li>
+        <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+     <li class="list-group-item list-group-item-warning" style="font-size: 0.9em;">
+  <div class="d-flex flex-column align-items-center">
+    <!-- Ligne principale : label + input + bouton -->
+    <div class="d-flex align-items-center gap-2 w-100 justify-content-center">
+      <span>Coupon (code)</span>
+      <input type="text" class="form-control w-auto text-center" maxlength="8" placeholder="code">
+      <button class="btn btn-success btn-sm ms-1">Valider</button>
+    </div>
+    <!-- Texte en dessous -->
+    <small class="text-muted mt-1 text-center">Les Légumes de Gaylord</small>
+  </div>
+</li>
+        <li class="list-group-item list-group-item-info" >
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+    <span>Les Herbes libres</span>
+    <span class="text-success fw-bold">6€</span>
+    <span class="badge bg-primary">1</span>
+  </div>
+  
+  <!-- Texte en dessous -->
+  <small class="text-muted d-block text-center">
+    Préparé par Gaylord
+  </small>
+</li>
+          
+        </li>
+         <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+          <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+       <li class="list-group-item list-group-item-info" >
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+    <span>Trip-Hop</span>
+    <span class="text-success fw-bold">6€</span>
+    <span class="badge bg-primary">1</span>
+  </div>
+  
+  <!-- Texte en dessous -->
+  <small class="text-muted d-block text-center">
+    A retirer auprès du vendeur
+  </small>
+</li>
+         <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+          <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+        <li class="list-group-item list-group-item-danger" style="font-size: 0.9em;">
+  <div class="d-flex flex-column align-items-center">
+    <!-- Ligne principale : label + input + bouton -->
+    <div class="d-flex align-items-center gap-2 w-100 justify-content-center">
+      <span>Achat d'alcool</span>
+       <input class="form-check-input" type="checkbox" value="" id="checkDefault">
+  <label class="form-check-label" for="checkDefault">
+    Je certifie avoir + de 18 ans
+  </label>
+    </div>
+     <small class="text-muted mt-1 text-center">L'abus d'alcool est dangereux pour la santé, à consommer avec modérations.</small>
+  </div>
+</li>
+      </ul>
+      <p class="fw-bold">Total : <span id="cartTotal" class="text-success fw-bold">0,00 €</span></p>
+      <div class="mb-3">
+       <form class="p-3 border rounded shadow-sm needs-validation" novalidate>
+  <!-- Ligne 1 : Nom et Prénom -->
+  <div class="row mb-3">
+    <div class="col-md-6 mb-3 mb-md-0">
+      <label for="nom" class="form-label">Nom *</label>
+      <input type="text" class="form-control" id="nom" placeholder="Votre nom" required>
+      <div class="invalid-feedback">
+        Veuillez saisir votre nom.
+      </div>
+    </div>
+    <div class="col-md-6">
+      <label for="prenom" class="form-label">Prénom *</label>
+      <input type="text" class="form-control" id="prenom" placeholder="Votre prénom" required>
+      <div class="invalid-feedback">
+        Veuillez saisir votre prénom.
+      </div>
+    </div>
+  </div>
+
+  <!-- Ligne 2 : Email -->
+  <div class="mb-3">
+    <label for="email" class="form-label">Email *</label>
+    <input type="email" class="form-control" id="email" placeholder="exemple@mail.com" required>
+    <div class="invalid-feedback">
+      Veuillez saisir une adresse email valide.
+    </div>
+  </div>
+
+  <!-- Ligne 3 : Téléphone -->
+  <div class="mb-3">
+    <label for="telephone" class="form-label">Téléphone *</label>
+    <input type="tel" class="form-control" id="telephone" placeholder="06 12 34 56 78" required pattern="[0-9\s\-]{10,}">
+    <div class="invalid-feedback">
+      Veuillez saisir un numéro de téléphone valide.
+    </div>
+  </div>
+      </div>
+      <p class="fw-bold">Notifications</p>
+     <div class="form-check form-switch" >
+  <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
+  <label class="form-check-label" for="switchCheckDefault" style="font-size:0.8em">Etre averti de l'ouverture des ventes chaque semaine</label>
+     </div>
+  <div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
+  <label class="form-check-label" for="switchCheckDefault"  style="font-size:0.8em">Recevoir les offres promotionnelles et les reductions fidélité</label>
+  </div>
+  <div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
+  <label class="form-check-label" for="switchCheckDefault"   style="font-size:0.8em">Recevoir les messages d'informations, congés, nouveaux partenaires etc...</label>
+
+</div>
+
+      <button class="btn btn-danger w-100 mt-3" onclick="checkout()">Minimum de commande non atteint</button>
+  <small class="text-muted d-block text-center">
+    Verifiez votre commande
+  </small>
+    </div>
+  </div>
+  
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Switch cartes / liste
+    const switchInput = document.getElementById('viewSwitch');
+    switchInput.addEventListener('change', () => {
+      document.querySelectorAll('.view-cards').forEach(el => el.classList.toggle('d-none'));
+      document.querySelectorAll('.view-list').forEach(el => el.classList.toggle('d-none'));
+    });
+
+    // Panier simple
+    let cart = [];
+    let panier = {}; // Structure: { nomProduit: {prix, quantite, total} }
+    function addToCart(name, price) {
+      cart.push({name, price});
+      updateCartUI();
+    }
+    function updateCartUI() {
+      const list = document.getElementById('cartItems');
+      list.innerHTML = '';
+      let total = 0;
+    Object.entries(panier).forEach(([nomProduit, item]) => {
+  total += parseFloat(item.total);
+  const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.textContent = nomProduit+' *'+item.quantite;
+       const span = document.createElement('span');
+        span.textContent = item.total + ' €';
+        li.appendChild(span);
+        list.appendChild(li);
+});
+        
+      
+      document.getElementById('cartTotal').textContent = total.toFixed(2) + ' €';
+      document.getElementById('cartSummary').textContent = `${total.toFixed(2)} €`;
+    }
+    function checkout() {
+      alert('Commande envoyée !');
+      cart = [];
+      updateCartUI();
+    }
+
+    // Notifications navigateur
+    /*
+    document.getElementById('notifTopBtn').addEventListener('click', async () => {
+      if ('Notification' in window) {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') alert('Notifications activées !');
+        else alert('Autorisation refusée.');
+      }
+    });
+    */
+    
+    // CSV loader
+
+
+// Charger producteurs et produits
+
+async function loadProducteurs() {
+  const spinner = document.getElementById('spinner-overlay');
+  spinner.classList.remove('hidden');
+
+  try {
+    // force le rendu du spinner
+    //await new Promise(r => requestAnimationFrame(r));
+
+    console.log("FETCH");
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwIKXZPnoT21L6RZU5BYLNdoYXSf-TyF9M_nyga_h_amgGaMBxSl69hxr0LZ4YlXSc7bQ/exec";
+    const urlParams = new URLSearchParams(window.location.search);
+    const retrait = urlParams.get('retrait');
+
+    const res = await fetch(`${scriptURL}?action=commande&retrait=${retrait}`);
+    const producteurs = await res.json();
+    
+      // attendre 1 frame pour forcer le rendu du spinner
+   // await new Promise(r => requestAnimationFrame(r));
+
+    console.log(producteurs);
+    const container = document.getElementById('productContainer');
+
+    for (const p of producteurs) {
+      const section = document.createElement('section');
+      section.className = 'mb-4';
+      section.innerHTML = `
+        <div class="alert alert-primary alert-small" role="alert">
+          <h4 id="prod1" class="h6 text-uppercase text-muted mb-3">>Producteur : ${p['nomProducteur']}</h4>
+        </div>
+        <div class="row g-4 view-cards"></div>
+        <div class="view-list d-none"></div>
+      `;
+      container.appendChild(section);
+
+      const products = p.products;
+      const cardsDiv = section.querySelector('.view-cards');
+      const listDiv = section.querySelector('.view-list');
+
+      products.forEach(prod => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'col-6 col-md-4 col-lg-3';
+        cardDiv.innerHTML = `
+          <div class="card product-card h-100">
+            <div class="img-container">
+              <div class="position-relative d-inline-block">
+                <img src="${prod.photo_url || 'https://picsum.photos/500'}" class="img-fluid" alt="${prod.nom}">
+                <img src="logo-bio.jpg" class="position-absolute bottom-0 end-0 m-2" style="width:30px; height:30px;" alt="Label AB">
+              </div>
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">${prod.nom}</h5>
+              <p class="mb-1 small text-muted">
+                Catégorie: ${prod.categorie} • Calibre: ${prod.calibre} • Origine: ${prod.origine} ${prod.label ? '• ' + prod.label : ''}
+              </p>
+              <p class="price">${prod.prix_unitaire} € / ${prod.unite}</p>
+              <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}" data-price="${prod.prix_unitaire}">
+                <button type="button" class="quantity-btn btn-minus">−</button>
+                <input type="number" class="quantity-input" value="0" min="0" max="10">
+                <button type="button" class="quantity-btn btn-plus">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+        cardsDiv.appendChild(cardDiv);
+        
+        const lineDiv=document.createElement('div');
+        lineDiv.className='product-list-item d-flex justify-content-between align-items-center';
+        lineDiv.innerHTML= `
+            <div><strong>${prod.nom}</strong><br><small>  Catégorie: ${prod.categorie} • Calibre: ${prod.calibre} • Origine: ${prod.origine} ${prod.label ? '• ' + prod.label : ''}</small>
+            <br><span class="price">${prod.prix_unitaire} € / ${prod.unite}</span></div>
+           <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}" data-price="${prod.prix_unitaire}">
+                <button type="button" class="quantity-btn btn-minus">−</button>
+                <input type="number" class="quantity-input" value="0" min="0" max="10">
+                <button type="button" class="quantity-btn btn-plus">+</button>
+              </div>
+        `;
+        listDiv.appendChild(lineDiv);
+        
+        
+        
+        
+      });
+    }
+  } catch (error) {
+    console.error("Erreur lors du chargement des producteurs :", error);
+  } finally {
+    spinner.classList.add('hidden');
+  }
+}
+
+
+
+
+loadProducteurs();
+    
+    
+  </script>
+  
+  
+<script>
+ 
+
+  function updateCart(product, price, quantity) {
+    if (quantity <= 0) {
+      delete panier[product];
+    } else {
+      panier[product] = {
+        prix_unitaire: price,
+        quantite: quantity,
+        total: (price * quantity).toFixed(2)
+      };
+    }
+    console.log("🛒 Panier mis à jour :", panier);
+    // 👉 Ici, tu peux mettre à jour une icône ou un compteur si tu veux
+     updateCartUI();
+  }
+
+// Fonction pour mettre à jour la quantité et synchroniser tout
+function updateQuantity(input, value) {
+  const selector = input.closest('.quantity-selector');
+  const id = selector.dataset.id;
+  const price = parseFloat(selector.dataset.price);
+  const min = parseInt(input.min);
+  const max = parseInt(input.max);
+
+  // Limites min/max
+  if (value < min) value = min;
+  if (value > max) value = max;
+  input.value = value;
+
+  // Synchroniser tous les inputs du même produit
+  const allSelectors = document.querySelectorAll(`.quantity-selector[data-id="${id}"]`);
+  allSelectors.forEach(sel => {
+    const inp = sel.querySelector('.quantity-input');
+    if (inp !== input) inp.value = value;
+
+    // Highlight carte et ligne
+    const card = sel.closest('.product-card');
+    const line = sel.closest('.product-list-item');
+    if (value > 0) {
+      if (card) card.classList.add('highlight');
+      if (line) line.classList.add('highlight');
+    } else {
+      if (card) card.classList.remove('highlight');
+      if (line) line.classList.remove('highlight');
+    }
+  });
+
+  // Mettre à jour le panier
+  updateCart(selector.dataset.product, price, value);
+}
+
+// Gestion des boutons + / −
+document.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('btn-minus') && !e.target.classList.contains('btn-plus')) return;
+
+  const selector = e.target.closest('.quantity-selector');
+  const input = selector.querySelector('.quantity-input');
+  let value = parseInt(input.value) || 0;
+
+  if (e.target.classList.contains('btn-minus')) value--;
+  if (e.target.classList.contains('btn-plus')) value++;
+
+  updateQuantity(input, value);
+});
+
+// Gestion de la saisie directe dans l'input
+document.addEventListener('input', (e) => {
+  if (!e.target.classList.contains('quantity-input')) return;
+
+  const input = e.target;
+  let value = parseInt(input.value) || 0;
+
+  updateQuantity(input, value);
+});
+
+</script>
+
+</body>
+</html>
