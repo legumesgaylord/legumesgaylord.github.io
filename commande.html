@@ -6,7 +6,19 @@
   <title>Commande - Vente directe</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="app.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js" defer></script>
+  
   <style>
+    
+.img-square {
+  width: 100%;
+  aspect-ratio: 1 / 1;   /* carré parfait */
+  object-fit: cover;      /* rogne pour remplir le carré */
+  //border-radius: 0.5rem;  /* optionnel */
+}
+
+
 .btn-commande {
   background-color: #28a745;
   border: none;
@@ -28,12 +40,28 @@
   background-color: #e6f9ec; /* vert très pâle */
 }
 
+.product-card.highlight-warning {
+  border: 2px solid #fd7e14; /* orange Bootstrap */
+  box-shadow: 0 0 15px rgba(253, 126, 20, 0.5);
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+  background-color: #fff4e6; /* orange très pâle */
+}
+
 .product-list-item.highlight {
   border: 2px solid #28a745; /* vert Bootstrap pour “bio” */
   /*box-shadow: 0 0 15px rgba(40, 167, 69, 0.5); */
   transform: scale(1.01); /* petit zoom */
   transition: all 0.3s ease;
   background-color: #e6f9ec; /* vert très pâle */
+}
+
+.product-list-item.highlight-warning {
+  border: 2px solid #fd7e14; /* orange Bootstrap */
+  box-shadow: 0 0 15px rgba(253, 126, 20, 0.5);
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+  background-color: #fff4e6; /* orange très pâle */
 }
 
 .spinner-overlay {
@@ -66,9 +94,30 @@
   0%,80%,100% { transform: scale(0); }
   40% { transform: scale(1); }
 }
+
+.grayed {
+  opacity: 0.4;
+  /*pointer-events: none; *//* empêche les clics */
+}
+/* Animation slide-down personnalisée */
+.notification-toast {
+  transform: translateY(-150%);
+  opacity: 0;
+  transition: transform 0.45s ease-out, opacity 0.45s ease-out;
+}
+
+.notification-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
 </style>
   <style>
-    body { padding-top: 70px; padding-bottom: 100px; }
+    body { padding-top: 90px; padding-bottom: 100px; }
+    @media (min-width: 992px) { /* desktop / lg+ */
+    body {
+        padding-top: 60px; /* ajuster selon la hauteur réelle de la navbar sur desktop */
+    }
+}
     .navbar { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .footer-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #f8f9fa; border-top: 1px solid #ddd; padding: .5rem 1rem; }
     .product-list-item { border-bottom: 1px solid #ddd; padding: .1rem 0; font-size:0.9em}
@@ -172,9 +221,9 @@
     }
   </style>
 </head>
-<body>
+<body   x-data="app()" >
 
-<div id="spinner-overlay" class="spinner-overlay hidden">
+<div x-show="loading" id="spinner-overlay" class="spinner-overlay hidden">
   <div class="spinner-content text-center">
     <div class="spinner-container">
       <div class="spinner-dot spinner-dot1"></div>
@@ -186,220 +235,316 @@
     </div>
   </div>
 </div>
- <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-  <div class="container-fluid flex-wrap flex-lg-nowrap">
-    <!-- Bloc gauche : nom + date/adresse -->
-    <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center">
-      <h2 class="h5 mb-1 me-lg-3">
-        <a id="navbarTitre" class="navbar-brand fw-bold" href="#">Chargement...</a>
-      </h2>
-      <p class="mb-0 small text-muted text-start">
-        <span id="navbarDate">{Dates},</span><br class="d-lg-none" />
-        <span id="navbarAdresse">{Adresse}</span>
-      </p>
-    </div>
 
-    <!-- Bloc droit : bouton switch -->
-    <div class="ms-auto d-flex align-items-center mt-2 mt-lg-0">
-      <span class="me-2">Liste</span>
-      <div class="form-check form-switch me-3">
-        <input class="form-check-input" type="checkbox" role="switch" id="viewSwitch" checked>
-        <label class="form-check-label" for="viewSwitch">Détails</label>
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <div class="container-fluid d-flex flex-column align-items-start">
+
+    <!-- Ligne titre + switch -->
+    <div class="d-flex w-100 align-items-center">
+      <h2 class="h5 mb-1 me-3 flex-grow-1">
+        <a class="navbar-brand fw-bold" href="#" x-text="pdv.titre || 'Chargement...'"></a>
+      </h2>
+
+      <!-- Switch à droite -->
+      <div class="d-flex align-items-center ms-auto">
+        <span class="me-2">Détails</span>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" id="viewSwitch" x-model="viewList">
+          <label class="form-check-label" for="viewSwitch">Liste</label>
+        </div>
       </div>
     </div>
+
+    <!-- Ligne date / adresse, toujours sous le titre -->
+    <p class="mb-0 small text-muted mt-1 w-100">
+      <span x-text="pdv.date ? formatDate(pdv.date) : ''"></span><br class="d-lg-none">
+      <span x-text="pdv.adresse || ''"></span>
+    </p>
+
   </div>
 </nav>
+
+
+
+
+
 
   
 
   <main class="container my-4" id="productContainer">
 
-
-
-
-
-    <!-- Producteur 1 -->
-    <section class="mb-4" aria-labelledby="prod1">
-      
-      <div class="alert alert-primary alert-small" role="alert">
-        <h4 id="prod1" class="h6 text-uppercase text-muted mb-3">Les Légumes de gaylord</h4>
-  Production en agriculture biologique à Beuvillers (Lisieux / Calvados) - <a href="#">En savoir +</a>
-</div>
-
-      <!-- Mode cartes -->
-      <div class="row g-4 view-cards">
-        <!-- Produit 1 -->
-         <div class="col-6 col-md-4 col-lg-3">
-        <div class="card product-card h-100">
-            <div class="img-container">
-               <div class="position-relative d-inline-block">
-              <img src="https://picsum.photos/500/500?random=11" alt="Carottes bio" class="img-fluid">
-              <img src="logo-bio.jpg" 
-       class="position-absolute  bottom-0 end-0 m-2" 
-       style="width:30px; height:30px;" 
-       alt="Label AB">
-</div>
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Carottes</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
-              <p class="price">2,80 €/kg</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option><option>3</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Carottes',2.8)">Ajouter</button>
-              </div>
-            </div>
+    <template x-if="producteurs.length > 0">
+  <template x-for="prod in producteurs" :key="prod.config.prefix">
+    <section class="mb-4">
+      <div :class="`alert alert-${prod.config.master === 'oui' ? 'primary' : 'info'} alert-small`" role="alert">
+        <h4 class="h6 text-uppercase text-muted mb-3"  x-text="`${
+      prod.config.master === 'non' ? 'Partenaire : ' + prod.config.nom : prod.config.nom
+    }${
+      prod.config.master === 'non' && prod.config.expéparmaster ? ' (préparé par Gaylord)' :
+      prod.config.master === 'non' && !prod.config.expéparmaster ? ' • A récupérer auprès du partenaire' : ''
+    }`"></h4>
+        <span x-html="prod.config.texte_court"></span>
+      </div>
+        <template x-if="prod.hasAlcohol">
+          <div class="alert alert-danger" style="font-size:14px;padding:5px">
+            L'abus d'alcool est dangereux pour la santé, à consommer avec modération! Vente interdite aux moins de 18 ans
           </div>
-        </div>
-
-        <!-- Produit 2 -->
-        <div class="col-6 col-md-4 col-lg-3">
-        <div class="card product-card h-100">
-            <div class="img-container">
-               <div class="position-relative d-inline-block">
-              <img src="https://picsum.photos/500/500?random=12" alt="Carottes bio" class="img-fluid">
-             <div class="position-absolute top-0 start-0 m-2 p-1 bg-danger text-white rounded">
-    Interdit -18 ans
+        </template>
+        <template x-if="prod.config.master !== 'oui' && prod.config.expéparmaster">
+  <div 
+    class="small mb-3 px-2 py-1 rounded"
+    :class="masterTotal < masterMin ? 'bg-danger text-white' : 'bg-success text-white'"
+    x-text="masterTotal < masterMin 
+            ? `Minimum de commande : ${masterMin}€ chez Les Légumes de Gaylord pour débloquer les partenaires préparés par Gaylord` 
+            : `Commande minimum atteinte (${masterMin}€ à Les Légumes de Gaylord)`">
   </div>
-</div></div>
-            <div class="card-body">
-              <h5 class="card-title">Poireaux</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Gros • Origine : France • Label : AB</p>
-              <p class="price">3,80 €/kg</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option><option>3</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Poireaux',3.8)">Ajouter</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Produit 3 -->
-         <div class="col-6 col-md-4 col-lg-3">
-        <div class="card product-card h-100">
-            <div class="img-container">
-              <img src="https://picsum.photos/300/300?random=13" alt="Oignons bio" class="card-img-top product-img">
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Oignons</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
-              <p class="price">3,00 €/kg</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option><option>3</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Oignons',3)">Ajouter</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mode liste -->
-      <div class="view-list d-none">
-        <div class="product-list-item d-flex justify-content-between align-items-center">
-          <div><strong>Carottes</strong><br><small>Cat. I • Calibre : Moyen • Origine : France • AB</small><br><span class="price">2,80 €/kg</span></div>
-          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Carottes',2.8)">Ajouter</button></div>
-        </div>
-        <div class="product-list-item d-flex justify-content-between align-items-center">
-          <div><strong>Poireaux</strong><br><small>Cat. I • Calibre : Gros • Origine : France • AB</small><br><span class="price">3,80 €/kg</span></div>
-          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Poireaux',3.8)">Ajouter</button></div>
-        </div>
-        <div class="product-list-item d-flex justify-content-between align-items-center">
-          <div><strong>Oignons</strong><br><small>Cat. I • Calibre : Moyen • Origine : France • AB</small><br><span class="price">3,00 €/kg</span></div>
-          <div><select class="form-select form-select-sm me-2" style="width:80px;"><option>1</option><option>2</option></select><button class="btn btn-outline-success btn-sm" onclick="addToCart('Oignons',3)">Ajouter</button></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="mb-4" aria-labelledby="prodX">
-<div class="alert alert-warning" role="warning">
- Pour pouvoir commander des produits de nos partenaires locaux, il faut commander au minimum 10€ aux Légumes de Gaylord
- <br/> Sur ce site de commande groupée, chaque partenaire est responsable de ses ventes réalisées directement avec ses clients. 
+</template>
+        <template x-if="prod.config.minCommande > 0 && ((prod.config.master === 'oui' || masterTotal >= masterMin) || prod.config.master !== 'oui')">
+  <div 
+    class="small mb-3 px-2 py-1 rounded"
+    :class="totalPartner(prod) < prod.config.minCommande ? 'bg-warning text-white' : 'bg-success text-white'"
+    x-text="
+prod.config.master === 'oui'
+  ? totalPartner(prod) <prod.config.minCommande
+            ? `Minimum de commande : ${prod.config.minCommande}€ necessaire` 
+            : `Commande minimum de (${prod.config.minCommande}€ chez ${prod.config.nom} atteinte)`
+  : totalPartner(prod) <prod.config.minCommande
+            ? `Minimum de commande : ${prod.config.minCommande}€ necessaire si vous commandez` 
+            : `Commande minimum du partenaire atteinte (${prod.config.minCommande}€ chez ${prod.config.nom})`" >
+  </div>
+</template>
+         <!-- Mode cartes -->
+        <div class="row g-4" x-show="!viewList">
+          <template x-if="prod.products.length">
+            <template x-for="p in prod.products" :key="p.nom">
+              <div class="col-6 col-md-4 col-lg-3" x-data="{ showMessage: false }">
+                <div class="card product-card h-100" 
+                      :class="{
+                       'highlight': p.qty > 0 &&  totalPartner(prod) >= prod.config.minCommande,
+                       'highlight-warning': p.qty > 0  && totalPartner(prod) < prod.config.minCommande,
+                        'grayed': prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster
+                      }"
+                     @click="
+                      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+                        showPartnerToast()
+                    }"
+                    x-init="initTooltip($el)"
+                    :title="p.description">
+                    
+                    
+                  <div class="img-container position-relative">
+                    <img :src="p.photo_url || 'https://picsum.photos/500'" class="img-square" :alt="p.nom">
+                      <template x-if="p.label === 'AB'">
+                    <img src="logo-bio.jpg" class="position-absolute bottom-0 end-0 m-2" style="width:30px;height:30px;" alt="Label AB">
+                      </template>
+                      <!-- Médaillon -18 si alcool -->
+<template x-if="p.alcool === 'oui'">
+  <div class="position-absolute top-0 start-0 m-2
+              d-flex align-items-center justify-content-center
+              bg-danger text-white rounded-pill px-2 py-1"
+       style="font-size:0.75rem; font-weight:bold;">
+    interdit -18ans
+  </div>
+</template>
+                  </div>
+                  <div class="card-body">
+                    <h5 class="card-title" x-text="p.nom"></h5>
+    <p class="mb-1 small text-muted"
+   x-text="[
+     p.categorie ? 'Catégorie: ' + p.categorie : null,
+     p.calibre ? 'Calibre: ' + p.calibre : null,
+     p.origine ? 'Origine: ' + p.origine : null,
+     p.label ? p.label : null,
+     p.alcool === 'oui' ? 'interdit -18ans' : null
+   ].filter(Boolean).join(' • ')">
+</p>
+<div class="price d-flex flex-column" style="gap:2px;">
+  <span x-text="p.prix_unitaire + ' € / ' + p.unite"></span>
+  <small class="text-muted" style="font-size:0.75rem;" x-text="p.infos_legales"></small>
 </div>
+                    <div class="quantity-selector">
+                      <button class="quantity-btn"@click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      p.qty > 0 && checkMasterChange(prod, p, p.qty - 1);
+    ">−</button>
+                      <input type="number" class="quantity-input" x-model.number="p.qty"  :min="0" :max="p.stock" @click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+    "
+    @change="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      checkMasterChange(prod, p, p.qty);
+    ">
+                      <button class="quantity-btn" @click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      checkMasterChange(prod, p, p.qty + 1);
+    ">+</button>
+                    </div>
+                  </div>
+                </div>
+                            
+                
+              </div>
+ 
+            </template>
+          </template>
+        </div>
+         <!-- Mode liste -->
+        <div x-show="viewList">
+          <template x-if="prod.products.length">
+            <template x-for="p in prod.products" :key="p.nom">
+              <div class="product-list-item d-flex justify-content-between align-items-center"
+                     :class="{
+                       'highlight': p.qty > 0 &&  totalPartner(prod) >= prod.config.minCommande,
+                       'highlight-warning': p.qty > 0  && totalPartner(prod) < prod.config.minCommande,
+                        'grayed': prod.config.master !== 'oui' && masterTotal < masterMin && prod.config.expéparmaster
+                      }"
+                     @click="
+                      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+                        showPartnerToast()
+                    }"
+                   >
+                <div>
+                  <strong x-text="p.nom"></strong><br>
+               <small x-text="[
+    p.categorie ? 'Catégorie: ' + p.categorie : null,
+    p.calibre ? 'Calibre: ' + p.calibre : null,
+    p.origine ? 'Origine: ' + p.origine : null,
+    p.label ? p.label : null,
+    p.alcool === 'oui' ? 'interdit -18ans' : null
+].filter(Boolean).join(' • ')"></small><br/><span class="price" x-text="p.prix_unitaire + ' € / ' + p.unite"></span>
+                  <small class="text-muted" style="font-size:0.75rem;" x-text="p.infos_legales"></small>
+                </div>
+                <div class="quantity-selector">
+                     <button class="quantity-btn"@click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      p.qty > 0 && checkMasterChange(prod, p, p.qty - 1);
+    ">−</button>
+                  <input type="number" class="quantity-input" x-model.number="p.qty"  :min="0" :max="p.stock" @click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+    "
+    @change="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      checkMasterChange(prod, p, p.qty);
+    ">
+                      <button class="quantity-btn" @click.stop="
+      if (prod.config.master !== 'oui' && masterTotal < masterMin  && prod.config.expéparmaster) {
+        showPartnerToast();
+        return;
+      }
+      checkMasterChange(prod, p, p.qty + 1);
+    ">+</button>
+                </div>
+              </div>
+            </template>
+          </template>
+        </div>
     </section>
-    <!-- Producteur 2 -->
-
-      
-       <div class="alert alert-info alert-small" role="alert">
-        <h4 id="prod2" class="h6 text-uppercase text-muted mb-3">Partenaire : Jardin du Moulin à Lisieux (14) / Préparé par Les Légumes de Gaylord</h4>
-  Production de bières artisanales à Lisieux (14) <a href="#">En savoir +</a>
-</div>
-
-      <div class="alert alert-danger" role="alert" style="font-size:14px;padding:5px">
- L'abus d'alcool est dangereux pour la santé, à consommer avec modération! Vente interdite aux moins de 18 ans
-</div>
-
-      <!-- Mode cartes -->
-      <div class="row g-3 view-cards">
-        <div class="col-md-4 d-flex">
-          <div class="card product-card h-100 d-flex flex-column">
-            <div class="img-container">
-              <img src="https://picsum.photos/300/300?random=21" alt="Pommes de terre bio">
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Pommes de terre</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Gros • Origine : France • Label : AB</p>
-              <p class="price">2,50 €/kg</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Pommes de terre',2.5)">Ajouter</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 d-flex">
-          <div class="card product-card h-100 d-flex flex-column">
-            <div class="img-container">
-              <img src="https://picsum.photos/300/300?random=22" alt="Potimarron bio">
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Potimarron</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Moyen • Origine : France • Label : AB</p>
-              <p class="price">2,50 €/pièce</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Potimarron',2.5)">Ajouter</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 d-flex">
-          <div class="card product-card h-100 d-flex flex-column">
-            <div class="img-container">
-              <img src="https://picsum.photos/300/300?random=23" alt="Topinambours bio">
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Topinambours</h5>
-              <p class="mb-1 text-muted small">Cat. I • Calibre : Petit • Origine : France • Label : AB</p>
-              <p class="price">4,00 €/kg</p>
-              <div class="d-flex align-items-center">
-                <select class="form-select form-select-sm me-2">
-                  <option>1</option><option>2</option>
-                </select>
-                <button class="btn btn-success btn-sm" onclick="addToCart('Topinambours',4)">Ajouter</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
+  </template>
+</template>
   </main>
+  
+<!-- TOAST GLOBAL NOTIFICATION -->
+<div class="position-fixed top-0 start-50 translate-middle-x p-3"
+     style="z-index: 2000;">
+  
+  <div id="partnerToast"
+       class="toast notification-toast text-bg-info shadow border-0"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true">
+
+    <div class="toast-header text-bg-info border-info">
+      <i class="bi bi-info-circle-fill me-2"></i>
+      <strong class="me-auto">Information</strong>
+      <small>Fermer</small>
+      <button type="button"
+              class="btn-close btn-close-white ms-2 mb-1"
+              data-bs-dismiss="toast"
+              aria-label="Close"></button>
+    </div>
+
+    <div class="toast-body">
+      Minimum <strong x-text="masterMin"></strong> € chez le producteur principal
+      pour pouvoir commander chez les partenaires.
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Attention</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <!-- BODY -->
+        <div class="mb-4">
+            <p>Les produits suivants vont être supprimés :</p>
+            <ul class="list-disc list-inside mt-2">
+                <template x-for="p in partnersToRemove" :key="p.nom">
+                    <li x-text="p.nom + ' (Qté: ' + p.qty + ')'"></li>
+                </template>
+            </ul>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"  @click="cancelPartnerRemoval" >Annuler</button>
+        <button type="button" class="btn btn-primary" @click="confirmPartnerRemoval" >Confirmer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
   <!-- Bandeau bas -->
-  <div class="footer-bar d-flex justify-content-between align-items-center bg-white border-top shadow-sm p-3 rounded-3">
-      <h5 class="mb-0">Total : <span class="text-success fw-bold" id="cartSummary">0,00 €</span></h5>
-   <button class="btn btn-commande d-flex align-items-center gap-2 rounded-pill px-4 py-2" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas"> <i class="bi bi-cart-plus-fill"></i>Commander</button>
-  </div>
+ <div class="footer-bar d-flex justify-content-between align-items-center bg-white border-top shadow-sm p-3 rounded-3">
+    <div class="d-flex flex-column">
+        <h5 class="mb-0">
+            Total :  
+            <span :class="totalClass" class="fw-bold" x-text="total.toFixed(2) + ' €'"></span>
+        </h5>
+        <small :class="totalClass" class="mt-1" x-text="totalReason"></small>
+    </div>
+
+    <button 
+        :class="[
+            'btn d-flex align-items-center gap-2 rounded-pill px-4 py-2 text-white', 
+            totalClass.replace('text-', 'bg-')
+        ]"
+         :disabled="totalClass !== 'text-success'"
+        data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+        <i class="bi bi-cart-plus-fill"></i> Commander
+    </button>
+</div>
+  
+  
 
   <!-- Offcanvas panier -->
   <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas">
@@ -548,12 +693,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Switch cartes / liste
-    const switchInput = document.getElementById('viewSwitch');
-    switchInput.addEventListener('change', () => {
-      document.querySelectorAll('.view-cards').forEach(el => el.classList.toggle('d-none'));
-      document.querySelectorAll('.view-list').forEach(el => el.classList.toggle('d-none'));
-    });
+
 
     // Panier simple
     let cart = [];
@@ -587,166 +727,6 @@
       updateCartUI();
     }
 
-    // Notifications navigateur
-    /*
-    document.getElementById('notifTopBtn').addEventListener('click', async () => {
-      if ('Notification' in window) {
-        const perm = await Notification.requestPermission();
-        if (perm === 'granted') alert('Notifications activées !');
-        else alert('Autorisation refusée.');
-      }
-    });
-    */
-    
-    // CSV loader
-
-
-// Charger producteurs et produits
-
-async function loadProducteurs() {
-  const spinner = document.getElementById('spinner-overlay');
-  spinner.classList.remove('hidden');
-
-  try {
-    // force le rendu du spinner
-    //await new Promise(r => requestAnimationFrame(r));
-
-    console.log("FETCH");
-    const scriptURL = "https://script.google.com/macros/s/AKfycbwIKXZPnoT21L6RZU5BYLNdoYXSf-TyF9M_nyga_h_amgGaMBxSl69hxr0LZ4YlXSc7bQ/exec";
-    const urlParams = new URLSearchParams(window.location.search);
-    const retrait = urlParams.get('retrait');
-
-    const res = await fetch(`${scriptURL}?action=commande&retrait=${retrait}`);
-    const json = await res.json();
-    
-      // attendre 1 frame pour forcer le rendu du spinner
-   // await new Promise(r => requestAnimationFrame(r));
-   
-
-    console.log(json);
-    document.getElementById("navbarTitre").textContent = json['pdv'].titre;
-    document.getElementById("navbarAdresse").textContent = json['pdv'].adresse;
-    
-    const dateRetrait = new Date(json['pdv'].date);
-    const dateFin = new Date(json['pdv'].date_fin);
-    
-    document.getElementById("navbarDate").textContent =` ${capitalizeFirst(formatJour(dateRetrait))} de ${dateRetrait.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} à ${dateFin.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
-    
-    producteurs = json['catalogue'];
-    const container = document.getElementById('productContainer');
-
-    for (const p of producteurs) {
-      const section = document.createElement('section');
-      section.className = 'mb-4';
-      section.setAttribute("data-mincmd", "123");
-      
-      
-      let headerStyle = "info";
-      if (p['config']['master']=="oui") {
-        headerStyle="primary";
-         section.setAttribute("data-master", "true"); //Est le master
-        section.setAttribute("data-mincmd", p['config'].minCommande); //Minimum de commande exigé
-        section.setAttribute("data-minpartenaire", p['config'].minCommandePartenaires); //Minimum de commande pour debloquer les partenaires
-      
-      }
-      section.innerHTML = `
-        <div class="alert alert-${headerStyle} alert-small" role="alert">
-          <h4 id="${p['config'].prefix}" class="h6 text-uppercase text-muted mb-3">${p['config'].nom}</h4>${p['config'].texte_court}
-        </div>`;
-        
-           //AJOUTER LE MESSAGE SI ALCOOL
-      const hasAlcohol = p['products'].some(p => p.alcool.toLowerCase() === "oui");
-      if (hasAlcohol) {
-          section.innerHTML += `<div class="alert alert-danger" role="alert" style="font-size:14px;padding:5px">
- L'abus d'alcool est dangereux pour la santé, à consommer avec modération! Vente interdite aux moins de 18 ans
-</div>`;
-      }
-      
-        
-        section.innerHTML += `<div class="row g-4 view-cards"></div>
-        <div class="view-list d-none"></div>`;
-      
-      
-   
-      container.appendChild(section);
-
-      const products = p.products;
-      const cardsDiv = section.querySelector('.view-cards');
-      const listDiv = section.querySelector('.view-list');
-
-      products.forEach(prod => {
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'col-6 col-md-4 col-lg-3';
-        cardDiv.innerHTML = `
-          <div class="card product-card h-100">
-            <div class="img-container">
-              <div class="position-relative d-inline-block">
-                <img src="${prod.photo_url || 'https://picsum.photos/500'}" class="img-fluid" alt="${prod.nom}">
-                <img src="logo-bio.jpg" class="position-absolute bottom-0 end-0 m-2" style="width:30px; height:30px;" alt="Label AB">
-              </div>
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">${prod.nom}</h5>
-              <p class="mb-1 small text-muted">
-                Catégorie: ${prod.categorie} • Calibre: ${prod.calibre} • Origine: ${prod.origine} ${prod.label ? '• ' + prod.label : ''}
-              </p>
-              <p class="price product-row"  data-prix-unitaire="${prod.prix_unitaire}">${prod.prix_unitaire} € / ${prod.unite}</p>
-              <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}"  data-price="${prod.prix_unitaire}">
-                <button type="button" class="quantity-btn btn-minus">−</button>
-                <input type="number" class="quantity-input" value="0" min="0" max="10"  data-price="${prod.prix_unitaire}">
-                <button type="button" class="quantity-btn btn-plus">+</button>
-              </div>
-            </div>
-          </div>
-        `;
-        cardsDiv.appendChild(cardDiv);
-        
-        const lineDiv=document.createElement('div');
-        lineDiv.className='product-list-item d-flex justify-content-between align-items-center';
-        lineDiv.innerHTML= `
-            <div><strong>${prod.nom}</strong><br><small>  Catégorie: ${prod.categorie} • Calibre: ${prod.calibre} • Origine: ${prod.origine} ${prod.label ? '• ' + prod.label : ''}</small>
-            <br><span class="price">${prod.prix_unitaire} € / ${prod.unite}</span></div>
-           <div class="quantity-selector" data-id="${prod.nom}"  data-product="${prod.nom}" data-price="${prod.prix_unitaire}">
-                <button type="button" class="quantity-btn btn-minus">−</button>
-                <input type="number" class="quantity-input" value="0" min="0" max="10">
-                <button type="button" class="quantity-btn btn-plus">+</button>
-              </div>
-        `;
-        listDiv.appendChild(lineDiv);
-        
-        
-        
-      });
-      
-    //APRES LA LISTE IL FAUT AFFICHER LES CONDITIONS DE COMMANDE, UPDATABLES
-    //SI MASTER, ON REGARDE LE MIN COMMANDE (En rouge) MIN POUR DEBLOQUER PARTENAIRES, LE MIN partenaires (en jaune)
-    //SI PartenaireON regarde le min commande (en rouge, sauf si 0)
-     /*   <section class="mb-4" aria-labelledby="prodX">
-<div class="alert alert-warning" role="warning">
- Pour pouvoir commander des produits de nos partenaires locaux, il faut commander au minimum 10€ aux Légumes de Gaylord
- <br/> Sur ce site de commande groupée, chaque partenaire est responsable de ses ventes réalisées directement avec ses clients. 
-</div>
-    </section>*/
-      
-      
-    }
-  } catch (error) {
-    console.error("Erreur lors du chargement des producteurs :", error);
-  } finally {
-    spinner.classList.add('hidden');
-  }
-}
-
-
-
-
-loadProducteurs();
-    
-    
-  </script>
-  
-  
-<script>
  
 function updatePartnerInputs() {
   const masterSection = document.querySelector('section[data-master="true"]');
@@ -825,83 +805,7 @@ let resetProducts = new Set();
      updateCartUI();
   }
 
-// Fonction pour mettre à jour la quantité et synchroniser tout
-function updateQuantity(input, value) {
-  
-  
-  
-  const selector = input.closest('.quantity-selector');
-  const id = selector.dataset.id;
-  const price = parseFloat(selector.dataset.price);
-  const min = parseInt(input.min);
-  const max = parseInt(input.max);
-
-  // Limites min/max
-  if (value < min) value = min;
-  if (value > max) value = max;
-  input.value = value;
-
-  // Synchroniser tous les inputs du même produit
-  const allSelectors = document.querySelectorAll(`.quantity-selector[data-id="${id}"]`);
-  allSelectors.forEach(sel => {
-    const inp = sel.querySelector('.quantity-input');
-    if (inp !== input) inp.value = value;
-
-    // Highlight carte et ligne
-    const card = sel.closest('.product-card');
-    const line = sel.closest('.product-list-item');
-    if (value > 0) {
-      if (card) card.classList.add('highlight');
-      if (line) line.classList.add('highlight');
-    } else {
-      if (card) card.classList.remove('highlight');
-      if (line) line.classList.remove('highlight');
-    }
-  });
-
-  
-  
-  // Mettre à jour le panier
-  updateCart(selector.dataset.product, price, value);
-}
-
-// Gestion des boutons + / −
-document.addEventListener('click', (e) => {
-  if (!e.target.classList.contains('btn-minus') && !e.target.classList.contains('btn-plus')) return;
-
-  const selector = e.target.closest('.quantity-selector');
-  const input = selector.querySelector('.quantity-input');
-  let value = parseInt(input.value) || 0;
-
-  if (e.target.classList.contains('btn-minus')) value--;
-  if (e.target.classList.contains('btn-plus')) value++;
-
-  
-  updateQuantity(input, value);
-  updatePartnerInputs();
-});
-
-// Gestion de la saisie directe dans l'input
-document.addEventListener('input', (e) => {
-  if (!e.target.classList.contains('quantity-input')) return;
-
-  const input = e.target;
-  let value = parseInt(input.value) || 0;
-   
-  updateQuantity(input, value);
-  updatePartnerInputs();
-});
-
-// --- Fonctions utilitaires ---
-function formatJour(date) {
-  const options = { weekday: 'long', day: '2-digit', month: '2-digit' };
-  return date.toLocaleDateString('fr-FR', options);
-}
-
-function capitalizeFirst(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
+/*
 function showToast(message, title = 'Attention') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -928,15 +832,35 @@ function showToast(message, title = 'Attention') {
   container.appendChild(toastEl);
 
   // Initialise le toast
-  const toast = new bootstrap.Toast(toastEl, { delay: 30000 });
+  const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
   toast.show();
 
   // Supprime le toast du DOM après disparition
   toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
 }
+*/
 
 
+function initTooltip(el) {
+  const tooltip = new bootstrap.Tooltip(el, {
+    trigger: 'manual', // on contrôle l'ouverture
+    placement: 'top',
+    html: true
+  });
 
+  el.addEventListener('mouseenter', () => tooltip.show());
+  el.addEventListener('mouseleave', () => tooltip.hide());
+  
+  el.addEventListener('click', (e) => {
+    tooltip.show();
+    document.addEventListener('click', function onDocClick(event) {
+      if (!el.contains(event.target)) {
+        tooltip.hide();
+        document.removeEventListener('click', onDocClick);
+      }
+    });
+  });
+}
 
 
 </script>
