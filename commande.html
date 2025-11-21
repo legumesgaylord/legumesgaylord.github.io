@@ -317,7 +317,7 @@ prod.config.master === 'oui'
         <div class="row g-4" x-show="!viewList">
           <template x-if="prod.products.length">
             <template x-for="p in prod.products" :key="p.nom">
-              <div class="col-6 col-md-4 col-lg-3" x-data="{ showMessage: false }">
+              <div class="col-6 col-md-4 col-lg-2" x-data="{ showMessage: false }">
                 <div class="card product-card h-100" 
                       :class="{
                        'highlight': p.qty > 0 &&  totalPartner(prod) >= prod.config.minCommande,
@@ -556,21 +556,57 @@ prod.config.master === 'oui'
        <div class="alert alert-warning d-flex justify-content-center align-items-center" role="alert" style="font-size:14px;padding:5px">
       Chaque partenaire est responsable de ses ventes réalisées directement avec ses clients.
        </div>
-      <ul id="cartItems" class="list-group mb-3" style="font-size:0.8em">
-      <li class="list-group-item list-group-item-primary">
-  <!-- Ligne principale : texte + prix + badge sur la même ligne -->
-  <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
-    <span>Les Légumes de Gaylord</span>
-    <span class="text-success fw-bold">8€</span>
-    <span class="badge bg-primary">2</span>
-  </div>
+       
+ <ul id="cartItems" class="list-group mb-3" style="font-size:0.9em">
   
-  <!-- Texte en dessous -->
-  <small class="text-muted d-block text-center">
-    Minimum de commande (10€) non atteint
-  </small>
+   
+  <!-- Ligne principale : texte + prix + badge sur la même ligne -->
+    <template x-if="totalQty() > 0">
+      <template x-for="prod in producteurs" :key="prod.config.prefix" >
+        <template  x-if="prod.products.reduce((sum, p) => sum + p.qty, 0) > 0">
+        <div>
+        <li class="list-group-item"
+            :class="{
+              'list-group-item-primary': prod.config.master === 'oui',
+              'list-group-item-info': prod.config.master !== 'oui'
+            }">
+
+          <!-- Ligne principale : nom + total + badge qty -->
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+            <span x-text="`Vendu par ${prod.config.nom}`"></span>
+            <span class="text-success fw-bold" x-text="totalPartner(prod).toFixed(2) + '€'"></span>
+            <span class="badge bg-primary" x-text="prod.products.reduce((sum, p) => sum + p.qty, 0)"></span>
+          </div>
+
+          <!-- Texte sous la ligne principale -->
+         <small class="text-muted d-block text-center"
+       x-text="prod.config.expéparmaster
+                ? 'Préparé et Livré par Les Légumes de Gaylord' 
+                : 'Préparé et Livré par ' + prod.config.nom">
+</small>
+        </li>
+          <!-- Lignes produits individuelles -->
+          
+          <template x-for="p in prod.products"  :key="p.product_id">
+          <li class="list-group-item list-group-item-secondary"
+    x-show="p.qty > 0">
+ <div class="d-flex w-100 justify-content-between align-items-center">
+  
+  <!-- Colonne gauche : nom + infos légales -->
+  <div class="d-flex flex-column">
+    <span x-text="p.nom + ' (' + p.unite + ') x' + p.qty"></span>
+    <small class="text-muted" x-text="p.infos_legales"></small>
+  </div>
+
+  <!-- Colonne droite : prix -->
+  <span x-text="(p.qty * p.prix_unitaire).toFixed(2) + '€'"></span>
+
+</div>
 </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
+        
+          </template>
+          
+         <template  x-if="prod.config.master==='oui'">
      <li class="list-group-item list-group-item-warning" style="font-size: 0.9em;">
   <div class="d-flex flex-column align-items-center">
     <!-- Ligne principale : label + input + bouton -->
@@ -583,53 +619,47 @@ prod.config.master === 'oui'
     <small class="text-muted mt-1 text-center">Les Légumes de Gaylord</small>
   </div>
 </li>
-        <li class="list-group-item list-group-item-info" >
-          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
-    <span>Les Herbes libres</span>
-    <span class="text-success fw-bold">6€</span>
-    <span class="badge bg-primary">1</span>
-  </div>
-  
-  <!-- Texte en dessous -->
-  <small class="text-muted d-block text-center">
-    Préparé par Gaylord
-  </small>
-</li>
-          
-        </li>
-         <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
-          <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
-       <li class="list-group-item list-group-item-info" >
-          <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
-    <span>Trip-Hop</span>
-    <span class="text-success fw-bold">6€</span>
-    <span class="badge bg-primary">1</span>
-  </div>
-  
-  <!-- Texte en dessous -->
-  <small class="text-muted d-block text-center">
-    A retirer auprès du vendeur
-  </small>
-</li>
-         <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
-          <li class="list-group-item d-flex justify-content-between align-items-center list-group-item-secondary" >Botte de carottes *2 <span>4€</span></li>
-        <li class="list-group-item list-group-item-danger" style="font-size: 0.9em;">
-  <div class="d-flex flex-column align-items-center">
-    <!-- Ligne principale : label + input + bouton -->
-    <div class="d-flex align-items-center gap-2 w-100 justify-content-center">
-      <span>Achat d'alcool</span>
-       <input class="form-check-input" type="checkbox" value="" id="checkDefault">
-  <label class="form-check-label" for="checkDefault">
-    Je certifie avoir + de 18 ans
-  </label>
-    </div>
-     <small class="text-muted mt-1 text-center">L'abus d'alcool est dangereux pour la santé, à consommer avec modérations.</small>
-  </div>
-</li>
-      </ul>
-      <p class="fw-bold">Total : <span id="cartTotal" class="text-success fw-bold">0,00 €</span></p>
-      <div class="mb-3">
-       <form class="p-3 border rounded shadow-sm needs-validation" novalidate>
+     </template>
+
+          <!-- Lignes alcool -->
+          <template x-if="prod.hasAlcohol">
+            <li class="list-group-item list-group-item-danger" style="font-size: 0.9em;">
+              <div class="d-flex flex-column align-items-center">
+                <div class="d-flex align-items-center gap-2 w-100 justify-content-center">
+                  <span>Achat d'alcool</span>
+                  <input class="form-check-input" type="checkbox" id="checkAlcohol" />
+                  <label class="form-check-label" for="checkAlcohol">
+                    Je certifie avoir + de 18 ans
+                  </label>
+                </div>
+                <small class="text-muted mt-1 text-center">
+                  L'abus d'alcool est dangereux pour la santé, à consommer avec modération.
+                </small>
+              </div>
+            </li>
+          </template>
+
+        </div>
+      </template>
+      
+      </template>
+      </template>
+      
+      <template x-if="totalQty() === 0">
+        <li class="list-group-item list-group-item-danger" style="font-size: 0.9em;">Ajoutez des produits à votre commande</li>
+      </template>
+
+    </ul>
+
+<p class="fw-bold">
+  Total : <span id="cartTotal" class="text-success fw-bold" x-text="total.toFixed(2) + ' €'"></span>
+</p>
+       
+       <!-- FIN DYNAMIQUE -->
+       
+<!-- FORMULAIRE -->
+
+<form class="p-3 border rounded shadow-sm needs-validation" novalidate>
   <!-- Ligne 1 : Nom et Prénom -->
   <div class="row mb-3">
     <div class="col-md-6 mb-3 mb-md-0">
@@ -665,7 +695,10 @@ prod.config.master === 'oui'
       Veuillez saisir un numéro de téléphone valide.
     </div>
   </div>
-      </div>
+
+  <!-- button type="submit" class="btn btn-primary">Envoyer</button -->
+
+<!-- FIN FORMULAIRE -->
       <p class="fw-bold">Notifications</p>
      <div class="form-check form-switch" >
   <input class="form-check-input" type="checkbox" role="switch" id="switchCheckDefault">
@@ -681,12 +714,57 @@ prod.config.master === 'oui'
 
 </div>
 
-      <button class="btn btn-danger w-100 mt-3" onclick="checkout()">Minimum de commande non atteint</button>
+     <button 
+    class="btn btn-danger w-100 mt-3" 
+    :class="{'btn-danger': totalClass !== 'text-success', 'btn-success': totalClass === 'text-success'}"
+    :disabled="totalClass !== 'text-success' || !formValid" 
+    @click="checkout()">
+    Procéder au réglement / validation de commande
+</button>
   <small class="text-muted d-block text-center">
     Verifiez votre commande
   </small>
     </div>
   </div>
+    
+    </form>
+<!-- VALIDATION FORM -->
+<script>
+(() => {
+  'use strict'
+
+  const forms = document.querySelectorAll('.needs-validation')
+
+  Array.from(forms).forEach(form => {
+    // Validation à la soumission
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+
+    // Validation instantanée au "blur" et au "input"
+    const inputs = form.querySelectorAll('input, select, textarea')
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        if (input.checkValidity()) {
+          input.classList.remove('is-invalid')
+          input.classList.add('is-valid')
+        } else {
+          input.classList.remove('is-valid')
+          input.classList.add('is-invalid')
+        }
+      })
+      input.addEventListener('blur', () => {
+        input.classList.add(input.checkValidity() ? 'is-valid' : 'is-invalid')
+      })
+    })
+  })
+})()
+</script>
+
   
 <div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
 
@@ -721,11 +799,7 @@ prod.config.master === 'oui'
       document.getElementById('cartTotal').textContent = total.toFixed(2) + ' €';
       document.getElementById('cartSummary').textContent = `${total.toFixed(2)} €`;
     }
-    function checkout() {
-      alert('Commande envoyée !');
-      cart = [];
-      updateCartUI();
-    }
+   
 
  
 function updatePartnerInputs() {

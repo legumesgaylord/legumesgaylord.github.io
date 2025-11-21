@@ -164,6 +164,9 @@ function app() {
         totalPartner(prod) {
             return prod.products.reduce((sum, p) => sum + (p.qty * p.prix_unitaire), 0);
         },
+        totalQty() { 
+        return this.producteurs.reduce((total, prod) => total + prod.products.reduce((sum, p) => sum + p.qty, 0), 0);
+        },
 
         showPartnerToast() {
             const toastEl = document.getElementById("partnerToast");
@@ -228,6 +231,20 @@ function app() {
         init() {
             console.log("Initialisation AlpineJS");
             this.loadProducteurs();
+        },
+        
+         /* ============================================================
+         *  CHECKOUT
+         * ========================================================== */
+        
+         checkout() {
+            if (!this.formValid || this.totalClass !== 'text-success'){
+                alert('PB VALIDATION');
+                return false;
+            }
+            alert('Commande envoyée !');
+            cart = [];
+    
         }
-    };
+}
 }
